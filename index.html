@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Day Line"/>
+<meta name="theme-color" content="#0a0a0f"/>
+<title>Day Line — Discipline Tracker</title>
+<link rel="manifest" href="manifest.json"/>
+<link rel="apple-touch-icon" href="icon-192.svg"/>
+<style>
+:root {
+  --bg: #0a0a0f;
+  --bg2: #111118;
+  --bg3: #18181f;
+  --bg4: #1e1e28;
+  --border: rgba(255,255,255,0.08);
+  --border2: rgba(255,255,255,0.14);
+  --text: #f0eff8;
+  --text2: #9898aa;
+  --text3: #555566;
+  --green: #1bbc85;
+  --green-bg: rgba(27,188,133,0.12);
+  --blue: #4b9cf5;
+  --blue-bg: rgba(75,156,245,0.12);
+  --amber: #f0a030;
+  --amber-bg: rgba(240,160,48,0.12);
+  --red: #f04848;
+  --red-bg: rgba(240,72,72,0.12);
+  --purple: #9b6dff;
+  --purple-bg: rgba(155,109,255,0.12);
+  --teal: #22d4c8;
+  --teal-bg: rgba(34,212,200,0.12);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif; }
+
+/* ── SHELL ── */
+#app { display: flex; flex-direction: column; height: 100vh; height: -webkit-fill-available; }
+#topbar { padding: calc(var(--safe-top) + 12px) 20px 12px; background: var(--bg); border-bottom: 0.5px solid var(--border); flex-shrink: 0; }
+#content { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
+#navbar { display: flex; background: var(--bg); border-top: 0.5px solid var(--border); padding-bottom: var(--safe-bottom); flex-shrink: 0; }
+.nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 10px 0; cursor: pointer; color: var(--text3); font-size: 10px; transition: color 0.2s; border: none; background: none; }
+.nav-btn svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.nav-btn.active { color: var(--blue); }
+
+/* ── TOPBAR ── */
+.tb-row { display: flex; align-items: center; justify-content: space-between; }
+.tb-title { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; color: var(--text); }
+.tb-sub { font-size: 12px; color: var(--text2); margin-top: 1px; font-style: italic; max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.align-pill { font-size: 11px; font-weight: 600; padding: 4px 12px; border-radius: 20px; background: var(--green-bg); color: var(--green); border: 0.5px solid rgba(27,188,133,0.3); letter-spacing: 0.02em; }
+.align-pill.warn { background: var(--amber-bg); color: var(--amber); border-color: rgba(240,160,48,0.3); }
+.align-pill.bad  { background: var(--red-bg); color: var(--red); border-color: rgba(240,72,72,0.3); }
+
+/* ── VIEWS ── */
+.view { display: none; padding-bottom: 24px; }
+.view.active { display: block; }
+
+/* ── METRICS ROW ── */
+.metrics { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; padding: 14px 16px; }
+.metric-card { background: var(--bg3); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 10px 10px; }
+.mc-label { font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 3px; }
+.mc-val { font-size: 20px; font-weight: 700; line-height: 1; }
+.mc-sub { font-size: 9px; color: var(--text3); margin-top: 2px; }
+
+/* ── SECTION HEADER ── */
+.sh { display: flex; align-items: center; gap: 10px; padding: 0 16px; margin: 6px 0 8px; }
+.sh-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap; }
+.sh-line { flex: 1; height: 0.5px; background: var(--border); }
+
+/* ── TIMELINE ── */
+.timeline-wrap { padding: 0 16px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+#tl-svg { display: block; }
+.tl-legend { display: flex; flex-wrap: wrap; gap: 10px; padding: 10px 16px 4px; }
+.leg { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--text2); }
+.leg-dot { width: 7px; height: 7px; border-radius: 50%; }
+
+/* ── DESTINATION CARD ── */
+.dest-card { margin: 4px 16px 12px; background: var(--bg3); border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 12px 14px; }
+.dest-label { font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 5px; }
+.dest-text { font-size: 13px; color: var(--text); font-style: italic; line-height: 1.4; }
+.dest-input-row { display: flex; gap: 8px; margin-top: 8px; }
+.dest-input-row input { flex: 1; background: var(--bg4); border: 0.5px solid var(--border2); border-radius: var(--radius-sm); padding: 8px 11px; font-size: 12px; color: var(--text); outline: none; }
+.dest-input-row input::placeholder { color: var(--text3); }
+.dest-input-row input:focus { border-color: var(--blue); }
+.btn-sm { background: var(--blue-bg); color: var(--blue); border: 0.5px solid rgba(75,156,245,0.3); border-radius: var(--radius-sm); padding: 8px 14px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background 0.15s; }
+.btn-sm:active { background: var(--blue); color: #fff; }
+
+/* ── BLOCKS LIST ── */
+.blocks-list { padding: 0 16px; display: flex; flex-direction: column; gap: 5px; }
+.block-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--bg3); border: 0.5px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; transition: background 0.15s; -webkit-user-select: none; user-select: none; }
+.block-item:active { background: var(--bg4); }
+.block-item.done { opacity: 0.5; }
+.block-item.is-noise { border-color: rgba(240,72,72,0.3); background: rgba(240,72,72,0.05); }
+.block-item.is-active { border-color: rgba(75,156,245,0.4); }
+.bi-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.bi-time { font-size: 11px; color: var(--text3); min-width: 40px; font-variant-numeric: tabular-nums; }
+.bi-name { font-size: 13px; color: var(--text); flex: 1; line-height: 1.3; }
+.bi-tag { font-size: 9px; padding: 2px 7px; border-radius: 9px; font-weight: 600; letter-spacing: 0.02em; white-space: nowrap; }
+.bi-check { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--border2); flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.bi-check.checked { background: var(--green); border-color: var(--green); }
+.bi-check.checked::after { content:''; width:5px; height:5px; border-bottom: 1.5px solid #fff; border-right: 1.5px solid #fff; transform: rotate(45deg) translate(-1px,-1px); }
+
+/* ── ADD BLOCK ── */
+.add-block-section { padding: 8px 16px 4px; }
+.add-row { display: flex; gap: 8px; }
+.add-row input { flex: 1; background: var(--bg3); border: 0.5px solid var(--border2); border-radius: var(--radius-sm); padding: 9px 12px; font-size: 13px; color: var(--text); outline: none; }
+.add-row input::placeholder { color: var(--text3); }
+.add-row input:focus { border-color: var(--blue); }
+.cat-scroll { display: flex; gap: 6px; padding: 8px 16px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.cat-scroll::-webkit-scrollbar { display: none; }
+.cat-chip { font-size: 11px; padding: 5px 12px; border-radius: 14px; cursor: pointer; border: 0.5px solid var(--border2); color: var(--text2); background: var(--bg3); white-space: nowrap; transition: all 0.15s; -webkit-user-select: none; user-select: none; }
+.cat-chip.selected { border-color: var(--blue); color: var(--blue); background: var(--blue-bg); }
+
+/* ── CALENDAR SYNC ── */
+.cal-section { padding: 0 16px; }
+.cal-header { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 10px; }
+.cal-item { display: flex; align-items: flex-start; gap: 10px; padding: 11px 12px; background: var(--bg3); border: 0.5px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 6px; }
+.cal-score-badge { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+.cal-info { flex: 1; min-width: 0; }
+.cal-name { font-size: 13px; color: var(--text); font-weight: 500; }
+.cal-meta { font-size: 11px; color: var(--text2); margin-top: 2px; }
+.cal-rec { font-size: 11px; margin-top: 5px; padding: 4px 9px; border-radius: 7px; display: inline-block; }
+.cal-actions { display: flex; gap: 6px; margin-top: 7px; }
+.cal-btn { font-size: 11px; padding: 4px 11px; border-radius: 7px; cursor: pointer; font-weight: 500; border: 0.5px solid; transition: all 0.15s; }
+.cal-btn.accept { background: var(--green-bg); color: var(--green); border-color: rgba(27,188,133,0.3); }
+.cal-btn.decline { background: var(--red-bg); color: var(--red); border-color: rgba(240,72,72,0.3); }
+.cal-btn.defer { background: var(--amber-bg); color: var(--amber); border-color: rgba(240,160,48,0.3); }
+
+.score-ring { position: relative; }
+
+/* ── WEEKLY TREND ── */
+.trend-section { padding: 0 16px; }
+.week-chart-wrap { background: var(--bg3); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 14px; overflow: hidden; }
+.week-bars { display: flex; align-items: flex-end; gap: 6px; height: 100px; margin-bottom: 8px; }
+.week-bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0; }
+.week-bar { width: 100%; border-radius: 4px 4px 0 0; min-height: 4px; transition: height 0.4s ease; }
+.week-day-label { font-size: 10px; color: var(--text3); margin-top: 5px; }
+.week-pct-label { font-size: 9px; color: var(--text2); margin-top: 2px; }
+.trend-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+.ts-card { background: var(--bg3); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 10px; text-align: center; }
+.ts-val { font-size: 20px; font-weight: 700; }
+.ts-label { font-size: 10px; color: var(--text3); margin-top: 2px; }
+
+.cat-breakdown { background: var(--bg3); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 14px; }
+.cat-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.cat-row:last-child { margin-bottom: 0; }
+.cat-label { font-size: 12px; color: var(--text2); min-width: 80px; }
+.cat-bar-wrap { flex: 1; height: 5px; background: var(--bg4); border-radius: 3px; overflow: hidden; }
+.cat-bar { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+.cat-pct { font-size: 11px; color: var(--text2); min-width: 30px; text-align: right; }
+
+/* ── GOALS ── */
+.goals-section { padding: 0 16px; }
+.goal-card { background: var(--bg3); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 8px; }
+.goal-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.goal-card-name { font-size: 14px; font-weight: 600; color: var(--text); }
+.goal-card-pct { font-size: 18px; font-weight: 700; }
+.goal-card-target { font-size: 11px; color: var(--text3); margin-bottom: 6px; }
+.goal-progress-bar { width: 100%; height: 5px; background: var(--bg4); border-radius: 3px; overflow: hidden; margin-bottom: 8px; }
+.goal-progress-fill { height: 100%; border-radius: 3px; transition: width 0.5s; }
+.goal-forecast { font-size: 11px; color: var(--text2); padding: 6px 9px; background: var(--bg4); border-radius: var(--radius-sm); }
+
+/* ── AI COACH ── */
+.ai-section { padding: 0 16px; }
+.ai-card { background: linear-gradient(135deg, rgba(75,156,245,0.08) 0%, rgba(155,109,255,0.08) 100%); border: 0.5px solid rgba(155,109,255,0.25); border-radius: var(--radius); padding: 14px; margin-bottom: 12px; }
+.ai-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.ai-icon { width: 28px; height: 28px; background: var(--purple-bg); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+.ai-title { font-size: 13px; font-weight: 600; color: var(--text); }
+.ai-sub { font-size: 11px; color: var(--text3); }
+.ai-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.ai-chip { font-size: 11px; padding: 6px 12px; border-radius: 14px; cursor: pointer; border: 0.5px solid rgba(155,109,255,0.3); color: var(--purple); background: var(--purple-bg); font-weight: 500; line-height: 1.3; transition: all 0.15s; }
+.ai-chip:active { background: var(--purple); color: #fff; }
+
+.daily-brief { background: var(--bg3); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 8px; }
+.brief-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); margin-bottom: 8px; }
+.brief-item { display: flex; gap: 8px; align-items: flex-start; padding: 6px 0; border-bottom: 0.5px solid var(--border); font-size: 12px; color: var(--text2); line-height: 1.4; }
+.brief-item:last-child { border-bottom: none; padding-bottom: 0; }
+.brief-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+
+/* ── NOISE ── */
+.noise-section { padding: 0 16px; }
+.noise-item { display: flex; align-items: center; gap: 10px; padding: 11px 12px; background: rgba(240,72,72,0.06); border: 0.5px solid rgba(240,72,72,0.25); border-radius: var(--radius-sm); margin-bottom: 6px; }
+.noise-name { font-size: 13px; flex: 1; color: var(--text); }
+.noise-time { font-size: 11px; color: var(--text3); }
+.noise-x { width: 26px; height: 26px; border-radius: 50%; background: var(--red-bg); border: 0.5px solid rgba(240,72,72,0.3); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--red); font-size: 14px; flex-shrink: 0; }
+.noise-empty { text-align: center; padding: 28px 0; font-size: 13px; color: var(--green); }
+
+/* ── SCROLLBAR ── */
+#content::-webkit-scrollbar { width: 3px; }
+#content::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+/* ── MODAL ── */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; display: flex; align-items: flex-end; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal-sheet { width: 100%; background: var(--bg2); border-radius: 20px 20px 0 0; padding: 20px 20px calc(20px + var(--safe-bottom)); border-top: 0.5px solid var(--border2); transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); }
+.modal-overlay.open .modal-sheet { transform: translateY(0); }
+.modal-handle { width: 36px; height: 4px; background: var(--border2); border-radius: 2px; margin: 0 auto 16px; }
+.modal-title { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 14px; }
+.modal-input { width: 100%; background: var(--bg3); border: 0.5px solid var(--border2); border-radius: var(--radius-sm); padding: 11px 13px; font-size: 14px; color: var(--text); outline: none; margin-bottom: 10px; }
+.modal-input:focus { border-color: var(--blue); }
+.modal-row { display: flex; gap: 8px; }
+.modal-btn { flex: 1; padding: 12px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; }
+.modal-btn.primary { background: var(--blue); color: #fff; }
+.modal-btn.cancel { background: var(--bg4); color: var(--text2); }
+
+/* animations */
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+.live-dot { animation: pulse 2s ease-in-out infinite; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- TOPBAR -->
+  <div id="topbar">
+    <div class="tb-row">
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="tb-title">Day Line</div>
+          <div class="live-dot" style="width:6px;height:6px;border-radius:50%;background:var(--red);"></div>
+        </div>
+        <div class="tb-sub" id="dest-display-top">Set today's destination →</div>
+      </div>
+      <div class="align-pill" id="align-pill">72%</div>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div id="content">
+
+    <!-- VIEW: TODAY -->
+    <div id="view-today" class="view active">
+      <!-- Metrics -->
+      <div class="metrics">
+        <div class="metric-card">
+          <div class="mc-label">On Line</div>
+          <div class="mc-val" id="m-online" style="color:var(--green)">5</div>
+          <div class="mc-sub">goal-aligned</div>
+        </div>
+        <div class="metric-card">
+          <div class="mc-label">Noise</div>
+          <div class="mc-val" id="m-noise" style="color:var(--red)">1</div>
+          <div class="mc-sub">off-line</div>
+        </div>
+        <div class="metric-card">
+          <div class="mc-label">Done</div>
+          <div class="mc-val" id="m-done">4</div>
+          <div class="mc-sub">of <span id="m-total">0</span></div>
+        </div>
+        <div class="metric-card">
+          <div class="mc-label">Hours Left</div>
+          <div class="mc-val" id="m-hours" style="color:var(--amber)">--</div>
+          <div class="mc-sub">to 6 PM</div>
+        </div>
+      </div>
+
+      <!-- Timeline -->
+      <div class="sh"><div class="sh-label">Day line</div><div class="sh-line"></div><div style="font-size:10px;color:var(--text3);font-style:italic">UCL/LCL = noise drift</div></div>
+      <div class="timeline-wrap">
+        <svg id="tl-svg" viewBox="0 0 720 110" style="height:110px;min-width:600px;"></svg>
+      </div>
+      <div class="tl-legend">
+        <div class="leg"><div class="leg-dot" style="background:#4b9cf5"></div>Leading</div>
+        <div class="leg"><div class="leg-dot" style="background:#1bbc85"></div>Goal-aligned</div>
+        <div class="leg"><div class="leg-dot" style="background:#f04848"></div>Noise</div>
+        <div class="leg"><div class="leg-dot" style="background:#f0a030"></div>Networking</div>
+        <div class="leg"><div class="leg-dot" style="background:#22d4c8"></div>Travel</div>
+      </div>
+
+      <!-- Destination -->
+      <div class="dest-card">
+        <div class="dest-label">Today's destination (flight plan)</div>
+        <div class="dest-text" id="dest-full-text">Not set — tap to define your day</div>
+        <div class="dest-input-row" id="dest-input-row" style="display:none">
+          <input type="text" id="dest-input" placeholder="e.g. Advance C&D P3 — send term sheet, 2 client calls"/>
+          <button class="btn-sm" onclick="saveDestination()">Set</button>
+        </div>
+        <div style="margin-top:7px;">
+          <button class="btn-sm" onclick="toggleDestInput()" id="dest-edit-btn" style="font-size:11px;padding:5px 12px;">Edit destination</button>
+        </div>
+      </div>
+
+      <!-- Blocks -->
+      <div class="sh"><div class="sh-label">Today's blocks</div><div class="sh-line"></div></div>
+      <div class="blocks-list" id="blocks-list"></div>
+
+      <!-- Add block -->
+      <div class="add-block-section" style="margin-top:10px;">
+        <div class="sh" style="margin-top:0"><div class="sh-label">Log activity</div><div class="sh-line"></div></div>
+        <div class="add-row">
+          <input type="text" id="new-name" placeholder="Activity name"/>
+          <button class="btn-sm" onclick="addBlock()">Add</button>
+        </div>
+        <div class="cat-scroll" id="cat-chips">
+          <div class="cat-chip selected" data-cat="leading" onclick="selectCat(this)">Leading indicator</div>
+          <div class="cat-chip" data-cat="revenue" onclick="selectCat(this)">Revenue / goal</div>
+          <div class="cat-chip" data-cat="travel" onclick="selectCat(this)">Travel</div>
+          <div class="cat-chip" data-cat="networking" onclick="selectCat(this)">Networking</div>
+          <div class="cat-chip" data-cat="noise" onclick="selectCat(this)">Noise / off-line</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW: CALENDAR SCORING -->
+    <div id="view-calendar" class="view">
+      <div style="padding:12px 16px 4px;">
+        <div style="font-size:11px;color:var(--text2);line-height:1.5;background:var(--bg3);border-radius:10px;padding:10px 12px;border:0.5px solid var(--border);">
+          Each meeting is scored 0–100 for goal alignment. <span style="color:var(--green)">Accept</span> what moves the line. <span style="color:var(--amber)">Defer</span> what can wait. <span style="color:var(--red)">Decline</span> noise.
+        </div>
+      </div>
+      <div class="sh" style="margin-top:12px;"><div class="sh-label">Upcoming — alignment score</div><div class="sh-line"></div></div>
+      <div class="cal-section" id="cal-list"></div>
+    </div>
+
+    <!-- VIEW: WEEKLY TRENDS -->
+    <div id="view-trends" class="view">
+      <div class="sh" style="margin-top:12px;"><div class="sh-label">This week</div><div class="sh-line"></div></div>
+      <div class="trend-section">
+        <div class="week-chart-wrap">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:10px;">Daily alignment % — week of Mar 23</div>
+          <div class="week-bars" id="week-bars"></div>
+        </div>
+        <div class="trend-stats">
+          <div class="ts-card"><div class="ts-val" style="color:var(--green)" id="ts-avg">--</div><div class="ts-label">Avg align</div></div>
+          <div class="ts-card"><div class="ts-val" style="color:var(--blue)" id="ts-streak">13</div><div class="ts-label">Best streak</div></div>
+          <div class="ts-card"><div class="ts-val" style="color:var(--amber)" id="ts-noise">--</div><div class="ts-label">Avg noise</div></div>
+        </div>
+        <div class="sh"><div class="sh-label">Category breakdown</div><div class="sh-line"></div></div>
+        <div class="cat-breakdown" id="cat-breakdown"></div>
+      </div>
+    </div>
+
+    <!-- VIEW: GOALS -->
+    <div id="view-goals" class="view">
+      <div class="sh" style="margin-top:12px;"><div class="sh-label">FY26 goal hierarchy</div><div class="sh-line"></div></div>
+      <div class="goals-section" id="goals-list"></div>
+      <div class="sh"><div class="sh-label">AI coaching</div><div class="sh-line"></div></div>
+      <div class="ai-section">
+        <div class="ai-card">
+          <div class="ai-header">
+            <div class="ai-icon">✦</div>
+            <div><div class="ai-title">Intelligent coaching</div><div class="ai-sub">Powered by Claude, Copilot & AI Refinery</div></div>
+          </div>
+          <div class="ai-chips" id="ai-chips"></div>
+        </div>
+        <div class="daily-brief">
+          <div class="brief-label">Daily brief — generated insights</div>
+          <div id="brief-items"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- NAVBAR -->
+  <div id="navbar">
+    <button class="nav-btn active" id="nav-today" onclick="switchView('today',this)">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
+      Today
+    </button>
+    <button class="nav-btn" id="nav-calendar" onclick="switchView('calendar',this)">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Calendar
+    </button>
+    <button class="nav-btn" id="nav-trends" onclick="switchView('trends',this)">
+      <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Trends
+    </button>
+    <button class="nav-btn" id="nav-goals" onclick="switchView('goals',this)">
+      <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      Goals
+    </button>
+  </div>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────
+const HOURS_START = 5, HOURS_END = 22;
+const CAT_COLOR = { leading:'#4b9cf5', revenue:'#1bbc85', travel:'#22d4c8', noise:'#f04848', networking:'#f0a030' };
+const CAT_LABEL = { leading:'Leading', revenue:'Goal-aligned', travel:'Travel', noise:'Noise', networking:'Networking' };
+
+let destination = '';
+let selectedCat = 'leading';
+
+let blocks = [
+  {id:1, name:'Brain exercises',         cat:'leading',    hour:5,  min:0,  done:true},
+  {id:2, name:'Workout / sweat',          cat:'leading',    hour:5,  min:30, done:true},
+  {id:3, name:'Read — strategy/sales',   cat:'leading',    hour:6,  min:30, done:true},
+  {id:4, name:'Shower & dress',           cat:'leading',    hour:7,  min:15, done:true},
+  {id:5, name:'C&D P3 prep call',         cat:'revenue',    hour:8,  min:30, done:false},
+  {id:6, name:'Client face-to-face',      cat:'revenue',    hour:10, min:0,  done:false},
+  {id:7, name:'Subway — NYCT HQ',         cat:'travel',     hour:11, min:30, done:false},
+  {id:8, name:'NYCT executive meeting',   cat:'revenue',    hour:13, min:0,  done:false},
+  {id:9, name:'Unaligned status call',    cat:'noise',      hour:14, min:30, done:false},
+  {id:10,name:'Copilot / AI Refinery',    cat:'leading',    hour:16, min:0,  done:false},
+  {id:11,name:'Networking dinner — MTA',  cat:'networking', hour:18, min:30, done:false},
+];
+
+let calItems = [
+  {id:1, name:'C&D P3 Steering Committee',  time:'8:30 AM', duration:'60 min', score:96, attendees:'CFO, BD Lead', rec:'accept',   note:'Direct path to close. Confirm term sheet agenda.'},
+  {id:2, name:'NYCT Demetrius Crichlow 1:1',time:'1:00 PM', duration:'45 min', score:98, attendees:'President NYCT', rec:'accept',  note:'Highest-priority meeting of the week. Prepare KPI outcomes deck.'},
+  {id:3, name:'Internal status sync — PMO', time:'2:30 PM', duration:'30 min', score:28, attendees:'6 internal', rec:'decline',  note:'No client impact. Send async update instead.'},
+  {id:4, name:'United Rentals AI pitch',    time:'Wed 10:00', duration:'60 min', score:88, attendees:'COO, CFO',    rec:'accept',   note:'Advance AI Refinery positioning. High revenue potential.'},
+  {id:5, name:'Lunch — Jon K + team',       time:'Thu 12:00', duration:'90 min', score:22, attendees:'Strategic Initiatives', rec:'defer', note:'Jon Kaufman involved. Low ROI. Consider rescheduling with different attendees.'},
+  {id:6, name:'Accenture internal town hall',time:'Fri 3:00', duration:'60 min', score:15, attendees:'All staff', rec:'defer',    note:'Record for async. Protect selling time.'},
+];
+
+let goals = [
+  {name:'Close C&D P3',        target:'Q2 FY26 (Jun 30)', pct:30, color:'#1bbc85', horizon:'quarterly', forecast:'On track if NYCT exec meeting advances this week.'},
+  {name:'$100M revenue FY26',  target:'Aug 31, 2026',     pct:18, color:'#4b9cf5', horizon:'annual',    forecast:'Need ~$82M in 5 months. Requires 3–4 new pursuits at scale.'},
+  {name:'Client conversations',target:'9 per week',        pct:112,color:'#f0a030', horizon:'weekly',   forecast:'Exceeding goal — 9 logged vs 8 target. +25% trend.'},
+  {name:'Face-to-face meetings',target:'4 per week',       pct:133,color:'#1bbc85', horizon:'weekly',   forecast:'4 done vs 3 target. On line.'},
+  {name:'Exercise / Sweat',    target:'5× per week',       pct:80, color:'#4b9cf5', horizon:'weekly',   forecast:'4 of 5 done. One session remaining this week.'},
+  {name:'Learn / Write',       target:'5× per week',       pct:80, color:'#22d4c8', horizon:'weekly',   forecast:'4 of 5 done. Use afternoon Copilot session to close.'},
+];
+
+let weekData = [
+  {day:'Mon', pct:68, noise:18},
+  {day:'Tue', pct:82, noise:10},
+  {day:'Wed', pct:91, noise:7},
+  {day:'Thu', pct:88, noise:9},
+  {day:'Fri', pct:0,  noise:0},
+  {day:'Sat', pct:0,  noise:0},
+  {day:'Sun', pct:0,  noise:0},
+];
+
+let catWeekData = {leading:38, revenue:30, travel:8, networking:10, noise:14};
+
+let aiChips = [
+  'Is C&D P3 on track to close Q2?',
+  'What should I prioritize this afternoon?',
+  'Assess today\'s alignment score',
+  'Which meetings should I decline this week?',
+  'How am I tracking vs $100M FY26?',
+  'Draft follow-up for NYCT exec meeting',
+  'What leading indicators need attention?',
+  'Recommend tomorrow\'s flight plan',
+];
+
+let briefItems = [
+  {color:'#1bbc85', text:'C&D P3 steering call at 8:30 AM has 96/100 alignment — highest priority block today.'},
+  {color:'#4b9cf5', text:'4 morning leading indicators complete. You\'re sharp and ready.'},
+  {color:'#f04848', text:'2:30 PM PMO sync scores 28/100 — recommend declining and sending async update.'},
+  {color:'#f0a030', text:'Networking dinner with MTA keeps relationship pipeline warm — keep it.'},
+  {color:'#22d4c8', text:'Subway travel to NYCT is productive time — prep exec meeting talking points.'},
+];
+
+// ── TIMELINE ─────────────────────────────────────────────────────
+function hourToX(h, m) {
+  const pct = ((h - HOURS_START) + m/60) / (HOURS_END - HOURS_START);
+  return 30 + pct * 660;
+}
+
+function renderTimeline() {
+  const svg = document.getElementById('tl-svg');
+  const now = new Date();
+  const nh = now.getHours(), nm = now.getMinutes();
+  let html = '';
+
+  // UCL / LCL bands
+  html += `<rect x="30" y="12" width="660" height="86" rx="8" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="0.5" stroke-dasharray="4 3"/>`;
+  html += `<text x="34" y="20" font-size="8" fill="#555566" font-family="inherit">UCL</text>`;
+  html += `<text x="34" y="106" font-size="8" fill="#555566" font-family="inherit">LCL</text>`;
+  // Center line
+  html += `<line x1="30" y1="55" x2="690" y2="55" stroke="rgba(255,255,255,0.1)" stroke-width="0.5" stroke-dasharray="3 4"/>`;
+
+  // Hour ticks
+  for (let h = HOURS_START; h <= HOURS_END; h += 2) {
+    const x = hourToX(h, 0);
+    const lbl = h < 12 ? h+'a' : h === 12 ? '12p' : (h-12)+'p';
+    html += `<line x1="${x}" y1="51" x2="${x}" y2="59" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>`;
+    html += `<text x="${x}" y="73" font-size="8" fill="#555566" text-anchor="middle" font-family="inherit">${lbl}</text>`;
+  }
+
+  // Work / morning zone shading
+  html += `<rect x="${hourToX(5,0)}" y="15" width="${hourToX(8,0)-hourToX(5,0)}" height="40" rx="4" fill="rgba(75,156,245,0.06)"/>`;
+  html += `<rect x="${hourToX(8,0)}" y="15" width="${hourToX(18,0)-hourToX(8,0)}" height="40" rx="4" fill="rgba(27,188,133,0.04)"/>`;
+
+  // Connecting path through goal-aligned blocks
+  const pathBlocks = blocks.filter(b => b.cat !== 'noise').sort((a,b) => a.hour*60+a.min - (b.hour*60+b.min));
+  if (pathBlocks.length > 1) {
+    const pts = pathBlocks.map(b => `${hourToX(b.hour,b.min)},55`).join(' ');
+    html += `<polyline points="${pts}" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="0.8" stroke-dasharray="2 4"/>`;
+  }
+
+  // Block markers
+  blocks.forEach(b => {
+    const x = hourToX(b.hour, b.min);
+    const col = CAT_COLOR[b.cat];
+    const y = b.cat === 'noise' ? 28 : 47;
+    const h = b.cat === 'noise' ? 18 : 16;
+    const op = b.done ? 0.4 : 1;
+    html += `<rect x="${x-5}" y="${y}" width="10" height="${h}" rx="3" fill="${col}" opacity="${op}"/>`;
+  });
+
+  // Now needle
+  if (nh >= HOURS_START && nh <= HOURS_END) {
+    const nx = hourToX(nh, nm);
+    const lbl = nh < 12 ? nh+':'+(nm<10?'0':'')+nm+'a' : (nh===12?'12':(nh-12))+':'+(nm<10?'0':'')+nm+'p';
+    html += `<line x1="${nx}" y1="12" x2="${nx}" y2="98" stroke="#f04848" stroke-width="1.5" stroke-linecap="round" opacity="0.9"/>`;
+    html += `<circle cx="${nx}" cy="55" r="3.5" fill="#f04848"/>`;
+    html += `<text x="${nx}" y="10" font-size="8" fill="#f04848" text-anchor="middle" font-family="inherit">${lbl}</text>`;
+  }
+
+  svg.innerHTML = html;
+}
+
+// ── BLOCKS ────────────────────────────────────────────────────────
+function renderBlocks() {
+  const list = document.getElementById('blocks-list');
+  const now = new Date();
+  const ch = now.getHours(), cm = now.getMinutes();
+  list.innerHTML = '';
+  [...blocks].sort((a,b) => a.hour*60+a.min - (b.hour*60+b.min)).forEach(b => {
+    const isNow = b.hour === ch && Math.abs(b.min - cm) < 90;
+    const isNoise = b.cat === 'noise';
+    const col = CAT_COLOR[b.cat];
+    const h = b.hour < 12 ? b.hour : b.hour;
+    const ampm = b.hour < 12 ? 'a' : 'p';
+    const displayH = b.hour > 12 ? b.hour - 12 : b.hour;
+    const timeStr = displayH + ':' + (b.min < 10 ? '0' : '') + b.min + ampm;
+    const tagStyle = `background:${col}22;color:${col};border:0.5px solid ${col}44;`;
+    const classes = ['block-item', b.done?'done':'', isNoise?'is-noise':'', isNow?'is-active':''].filter(Boolean).join(' ');
+    list.innerHTML += `
+      <div class="${classes}" onclick="toggleDone(${b.id})">
+        <div class="bi-time">${timeStr}</div>
+        <div class="bi-dot" style="background:${col}"></div>
+        <div class="bi-name">${b.name}${isNoise?'<span style="font-size:9px;color:var(--red);margin-left:4px;">⚠ noise</span>':''}</div>
+        <span class="bi-tag" style="${tagStyle}">${CAT_LABEL[b.cat]}</span>
+        <div class="bi-check ${b.done?'checked':''}"></div>
+      </div>`;
+  });
+}
+
+// ── METRICS ───────────────────────────────────────────────────────
+function updateMetrics() {
+  const done = blocks.filter(b => b.done).length;
+  const noise = blocks.filter(b => b.cat === 'noise').length;
+  const total = blocks.length;
+  const aligned = total - noise;
+  const pct = total ? Math.round(aligned / total * 100) : 0;
+  const now = new Date();
+  const hoursLeft = Math.max(0, 18 - now.getHours() - now.getMinutes()/60);
+
+  document.getElementById('m-done').textContent = done;
+  document.getElementById('m-total').textContent = total;
+  document.getElementById('m-noise').textContent = noise;
+  document.getElementById('m-online').textContent = aligned;
+  document.getElementById('m-hours').textContent = hoursLeft > 0 ? hoursLeft.toFixed(1) : '0';
+
+  const pill = document.getElementById('align-pill');
+  pill.textContent = pct + '% aligned';
+  pill.className = 'align-pill' + (pct >= 80 ? '' : pct >= 60 ? ' warn' : ' bad');
+}
+
+// ── CALENDAR ─────────────────────────────────────────────────────
+function renderCalendar() {
+  const list = document.getElementById('cal-list');
+  list.innerHTML = '';
+  calItems.forEach(item => {
+    const col = item.score >= 80 ? '#1bbc85' : item.score >= 50 ? '#f0a030' : '#f04848';
+    const bgCol = item.score >= 80 ? 'rgba(27,188,133,0.15)' : item.score >= 50 ? 'rgba(240,160,48,0.15)' : 'rgba(240,72,72,0.15)';
+    const recLabel = item.rec === 'accept' ? '✓ Accept' : item.rec === 'decline' ? '✕ Decline' : '↻ Defer';
+    const recBg = item.rec === 'accept' ? 'var(--green-bg);color:var(--green)' : item.rec === 'decline' ? 'var(--red-bg);color:var(--red)' : 'var(--amber-bg);color:var(--amber)';
+    list.innerHTML += `
+      <div class="cal-item" id="cal-${item.id}">
+        <div class="cal-score-badge" style="background:${bgCol};color:${col}">${item.score}</div>
+        <div class="cal-info">
+          <div class="cal-name">${item.name}</div>
+          <div class="cal-meta">${item.time} · ${item.duration} · ${item.attendees}</div>
+          <div class="cal-rec" style="background:${bgCol};color:${col};margin-top:5px;">${recLabel}</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:5px;line-height:1.4;">${item.note}</div>
+          <div class="cal-actions">
+            <div class="cal-btn accept" onclick="calAction(${item.id},'accept')">Accept</div>
+            <div class="cal-btn defer" onclick="calAction(${item.id},'defer')">Defer</div>
+            <div class="cal-btn decline" onclick="calAction(${item.id},'decline')">Decline</div>
+          </div>
+        </div>
+      </div>`;
+  });
+}
+
+function calAction(id, action) {
+  const el = document.getElementById('cal-' + id);
+  if (el) { el.style.opacity = '0.4'; el.style.pointerEvents = 'none'; }
+  const item = calItems.find(c => c.id === id);
+  if (item && action === 'accept') {
+    blocks.push({id: Date.now(), name: item.name, cat: 'revenue', hour: parseInt(item.time), min: 0, done: false});
+    renderAll();
+  }
+}
+
+// ── TRENDS ────────────────────────────────────────────────────────
+function renderTrends() {
+  const bars = document.getElementById('week-bars');
+  bars.innerHTML = '';
+  const maxPct = Math.max(...weekData.map(d => d.pct), 1);
+  let totalPct = 0, count = 0, totalNoise = 0;
+  weekData.forEach(d => {
+    const h = d.pct > 0 ? Math.round((d.pct / 100) * 90) : 0;
+    const col = d.pct >= 80 ? '#1bbc85' : d.pct >= 60 ? '#f0a030' : d.pct > 0 ? '#f04848' : 'rgba(255,255,255,0.08)';
+    bars.innerHTML += `
+      <div class="week-bar-col">
+        <div class="week-bar" style="height:${h}px;background:${col};"></div>
+        <div class="week-day-label">${d.day}</div>
+        <div class="week-pct-label">${d.pct > 0 ? d.pct+'%' : '—'}</div>
+      </div>`;
+    if (d.pct > 0) { totalPct += d.pct; totalNoise += d.noise; count++; }
+  });
+  document.getElementById('ts-avg').textContent = count ? Math.round(totalPct/count) + '%' : '--';
+  document.getElementById('ts-noise').textContent = count ? Math.round(totalNoise/count) + '%' : '--';
+
+  // Cat breakdown
+  const bd = document.getElementById('cat-breakdown');
+  bd.innerHTML = '';
+  const cats = [['leading','Leading indicators','#4b9cf5'],['revenue','Revenue / goals','#1bbc85'],['networking','Networking','#f0a030'],['travel','Travel','#22d4c8'],['noise','Noise','#f04848']];
+  cats.forEach(([key, label, col]) => {
+    const pct = catWeekData[key] || 0;
+    bd.innerHTML += `
+      <div class="cat-row">
+        <div class="cat-label">${label}</div>
+        <div class="cat-bar-wrap"><div class="cat-bar" style="width:${pct}%;background:${col}"></div></div>
+        <div class="cat-pct">${pct}%</div>
+      </div>`;
+  });
+}
+
+// ── GOALS ─────────────────────────────────────────────────────────
+function renderGoals() {
+  const list = document.getElementById('goals-list');
+  list.innerHTML = '';
+  goals.forEach(g => {
+    const pct = Math.min(g.pct, 100);
+    const col = g.pct >= 100 ? '#1bbc85' : g.pct >= 70 ? '#f0a030' : '#f04848';
+    list.innerHTML += `
+      <div class="goal-card">
+        <div class="goal-card-header">
+          <div class="goal-card-name">${g.name}</div>
+          <div class="goal-card-pct" style="color:${col}">${g.pct}%</div>
+        </div>
+        <div class="goal-card-target">Target: ${g.target}</div>
+        <div class="goal-progress-bar"><div class="goal-progress-fill" style="width:${pct}%;background:${col}"></div></div>
+        <div class="goal-forecast">${g.forecast}</div>
+      </div>`;
+  });
+
+  // AI chips
+  const chips = document.getElementById('ai-chips');
+  chips.innerHTML = aiChips.map(c =>
+    `<div class="ai-chip" onclick="handleAIChip('${c.replace(/'/g,"\\'")}')">${c}</div>`
+  ).join('');
+
+  // Brief
+  const brief = document.getElementById('brief-items');
+  brief.innerHTML = briefItems.map(b =>
+    `<div class="brief-item"><div class="brief-dot" style="background:${b.color}"></div>${b.text}</div>`
+  ).join('');
+}
+
+// ── INTERACTIONS ─────────────────────────────────────────────────
+function toggleDone(id) {
+  const b = blocks.find(b => b.id === id);
+  if (b) { b.done = !b.done; renderAll(); }
+}
+
+function addBlock() {
+  const name = document.getElementById('new-name').value.trim();
+  if (!name) return;
+  const now = new Date();
+  blocks.push({id: Date.now(), name, cat: selectedCat, hour: now.getHours(), min: now.getMinutes(), done: false});
+  document.getElementById('new-name').value = '';
+  renderAll();
+}
+
+function selectCat(el) {
+  document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedCat = el.dataset.cat;
+}
+
+function toggleDestInput() {
+  const row = document.getElementById('dest-input-row');
+  const btn = document.getElementById('dest-edit-btn');
+  if (row.style.display === 'none') { row.style.display = 'flex'; btn.textContent = 'Cancel'; }
+  else { row.style.display = 'none'; btn.textContent = 'Edit destination'; }
+}
+
+function saveDestination() {
+  const val = document.getElementById('dest-input').value.trim();
+  if (!val) return;
+  destination = val;
+  document.getElementById('dest-full-text').textContent = val;
+  document.getElementById('dest-display-top').textContent = val;
+  document.getElementById('dest-input-row').style.display = 'none';
+  document.getElementById('dest-edit-btn').textContent = 'Edit destination';
+}
+
+function handleAIChip(text) {
+  if (window.sendPrompt) sendPrompt(text);
+  else {
+    navigator.clipboard && navigator.clipboard.writeText(text);
+    alert('Copied to clipboard — paste into Claude to get your coaching insight:\n\n"' + text + '"');
+  }
+}
+
+function switchView(name, btn) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'trends') renderTrends();
+}
+
+function renderAll() {
+  renderTimeline();
+  renderBlocks();
+  updateMetrics();
+  renderCalendar();
+  renderGoals();
+}
+
+// ── INIT ──────────────────────────────────────────────────────────
+renderAll();
+setInterval(renderAll, 60000);
+
+// Pre-set destination
+destination = 'Close C&D P3 · NYCT exec meeting · $100M FY26';
+document.getElementById('dest-full-text').textContent = destination;
+document.getElementById('dest-display-top').textContent = destination;
+
+// Enter key support
+document.getElementById('new-name').addEventListener('keydown', e => { if (e.key === 'Enter') addBlock(); });
+document.getElementById('dest-input') && document.getElementById('dest-input').addEventListener('keydown', e => { if (e.key === 'Enter') saveDestination(); });
+
+// Service worker registration
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
